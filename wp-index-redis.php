@@ -31,42 +31,40 @@
 
 */
 
-// change vars here
+// controller vars here
 $debug = 1;			// set to 1 if you wish to see execution time and cache actions
-$display_powered_by_redis = 0;  // set to 1 if you want to display a powered by redis message with execution time, see below
 
 $start = microtime();   // start timing page exec
 
 
-// init vars
+// init vars & check HTTP environment
 $domain = $_SERVER['HTTP_HOST'];
 $url = "http://".$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
-// $url = str_replace('?r=y', '', $url);
-// $url = str_replace('?c=y', '', $url);
-// $dkey = md5($domain);
 $array = parse_url($url);
 $dkey = 'cache';
-// filter query_string
-$ukey = md5($array['path']);
+$ukey = md5($array['path']);      // filter query_string, reduce dumplicated url
+// check if logged in to wp
+$cookie = var_export($_COOKIE, true);
+$loggedin = strpos("wordpress_logged_in", $cookie);
+// check if page isn't a comment submission or reload request from client
+(isset($_SERVER['HTTP_CACHE_CONTROL']) && $_SERVER['HTTP_CACHE_CONTROL'] == 'max-age=0') ? $reload = 1 : $reload = 0;
+// check user-agent for robot
+(stripos($_SERVER['HTTP_USER_AGENT'], "bot") || stripos($_SERVER['HTTP_USER_AGENT'], "spider")) ? $robot = 1 : $robot = 0;
+// check feed
+strpos($url, '/feed/') ? $feed = 1 : $feed = 0;
+// check json request(for mobile device)
+strpos($url, 'json=') ? $json = 1 : $json = 0;
+
+
+// conditions below will not be cached
+if ($feed || $robot || $json) {
+    require('./wp-blog-header.php');
+    exit(0);
+}
+
 
 // from wp
 define('WP_USE_THEMES', true);
-
-// not cache for robot
-if (stripos($_SERVER['HTTP_USER_AGENT'], "bot") || stripos($_SERVER['HTTP_USER_AGENT'], "spider")) {
-    require('./wp-blog-header.php');
-    $msg = 'spider detected: '.$_SERVER['HTTP_USER_AGENT'];
-    echo $msg;
-    exit(0);
-}
-
-// not cache for feed/RSS
-if (substr($array['path'], -6) == '/feed/') {
-    require('./wp-blog-header.php');
-    exit(0);
-}
-
-
 
 // init predis
 include("predis.php");
@@ -77,51 +75,24 @@ $server = array(
 );
 $redis = new Predis\Client($server);
 
-// check if page isn't a comment submission or reload request from client
-(isset($_SERVER['HTTP_CACHE_CONTROL']) && $_SERVER['HTTP_CACHE_CONTROL'] == 'max-age=0') ? $submit = 1 : $submit = 0;
-
-// check if logged in to wp
-$cookie = var_export($_COOKIE, true);
-$loggedin = preg_match("/wordpress_logged_in/", $cookie);
-
 // check if a cache of the page exists
-if ($redis->hexists($dkey, $ukey) && !$loggedin && !$submit && !strpos($url, 'feed')) {
-
-    echo $redis->hget($dkey, $ukey);
-    if (!$debug) exit(0);
-    $cached = 1;
-    $msg = 'this is a cache';
-
-// if a comment was submitted or clear page cache request was made delete cache of page
-} else if ($submit || substr($_SERVER['REQUEST_URI'], -4) == '?r=y') {
-
-    require('./wp-blog-header.php');
-    $redis->hdel($dkey, $ukey);
-    $msg = 'cache of page deleted';
-
-// delete entire cache, works only if logged in
-} else if ($loggedin && substr($_SERVER['REQUEST_URI'], -4) == '?c=y') {
-
-    require('./wp-blog-header.php');
-    if ($redis->exists($dkey)) {
-        $redis->del($dkey);
-        $msg = 'domain cache flushed';
-    } else {
-        $msg = 'no cache to flush';
+if ($redis->hexists($dkey, $ukey)) {
+    if ($reload) {
+        require('./wp-blog-header.php');
+        $redis->hdel($dkey, $ukey);
+        $msg = 'cache of page deleted';
     }
-
-// if logged in don't cache anything
-} else if ($loggedin) {
-
-    require('./wp-blog-header.php');
-    $msg = 'not cached';
-
+    else {
+        echo $redis->hget($dkey, $ukey);
+        if (!$debug) exit(0);
+        $cached = 1;
+        $msg = 'this is a cache';
+    }
 // cache the page
 } else {
 
     // turn on output buffering
     ob_start();
-
     require('./wp-blog-header.php');
 
     // get contents of output buffer
@@ -135,7 +106,7 @@ if ($redis->hexists($dkey, $ukey) && !$loggedin && !$submit && !strpos($url, 'fe
     if (!is_404() && !is_search()) {
         // store html contents to redis cache
         $redis->hset($dkey, $ukey, $html);
-        $redis->hset('log', $ukey, $url);
+        $redis->hset('log', $ukey, $array['path']);
         $msg = 'cache is set';
     }
 }
@@ -148,12 +119,6 @@ if ($debug) {
     echo t_exec($start, $end).'-->';
 }
 
-if ($cached && $display_powered_by_redis) {
-	// You should move this CSS to your CSS file and change the: float:right;margin:20px 0;
-	echo "<style>#redis_powered{float:right;margin:20px 0;background:url(http://images.staticjw.com/jim/3959/redis.png) 10px no-repeat #fff;border:1px solid #D7D8DF;padding:10px;width:190px;}
-	#redis_powered div{width:190px;text-align:right;font:10px/11px arial,sans-serif;color:#000;}</style>";
-	echo "<a href=\"http://www.jimwestergren.com/wordpress-with-redis-as-a-frontend-cache/\" style=\"text-decoration:none;\"><div id=\"redis_powered\"><div>Page generated in<br/> ".t_exec($start, $end)." sec</div></div></a>";
-}
 
 // time diff
 function t_exec($start, $end) {
