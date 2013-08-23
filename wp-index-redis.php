@@ -55,6 +55,9 @@ strpos($url, '/feed/') ? $feed = 1 : $feed = 0;
 // check json request(for mobile device)
 strpos($url, 'json=') ? $json = 1 : $json = 0;
 
+// from wp
+define('WP_USE_THEMES', true);
+
 
 // conditions below will not be cached
 if ($feed || $robot || $json) {
@@ -62,9 +65,6 @@ if ($feed || $robot || $json) {
     exit(0);
 }
 
-
-// from wp
-define('WP_USE_THEMES', true);
 
 // init predis
 include("predis.php");
