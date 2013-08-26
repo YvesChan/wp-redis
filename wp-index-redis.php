@@ -33,7 +33,7 @@
 
 // controller vars here
 $debug = 1;			// set to 1 if you wish to see execution time and cache actions
-
+$expiration = 86400;     // set expire time in seconds
 $start = microtime();   // start timing page exec
 
 
@@ -80,7 +80,7 @@ if ($redis->exists($key)) {
         $html = ob_get_contents();
         ob_end_clean();
         echo $html;
-        $redis->setex($key, 86400, $html);
+        $redis->setex($key, $expiration, $html);
         $msg = 'cache of page updated';
     }
     else {
@@ -103,9 +103,9 @@ if ($redis->exists($key)) {
     echo $html;
 
     // Store to cache only if the page exist and is not a search result.
-    if (!is_404() && !is_search()) {
+    if (!is_404()) {
         // store html contents to redis cache
-        $redis->setex($key, 86400, $html);
+        $redis->setex($key, $expiration, $html);
         // $redis->hset('timestamp', $ukey, $_SERVER['REQUEST_TIME']);
         // $redis->hset('log', $ukey, $array['path']);
         $msg = 'cache is set';
