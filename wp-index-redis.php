@@ -106,6 +106,7 @@ if ($redis->hexists($dkey, $ukey)) {
     if (!is_404() && !is_search()) {
         // store html contents to redis cache
         $redis->hset($dkey, $ukey, $html);
+        // $redis->hset('timestamp', $ukey, $_SERVER['REQUEST_TIME']);
         $redis->hset('log', $ukey, $array['path']);
         $msg = 'cache is set';
     }
