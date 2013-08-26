@@ -38,29 +38,26 @@ $start = microtime();   // start timing page exec
 
 
 // init vars & check HTTP environment
-$domain = $_SERVER['HTTP_HOST'];
 $url = "http://".$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
 $array = parse_url($url);
-$dkey = 'cache';
-$ukey = md5($array['path']);      // filter query_string, reduce dumplicated url
+// filter query_string, reduce dumplicated url & check json request(for mobile device)
+strpos($url, 'json=') ? $key = $_SERVER['REQUEST_URI'] : $key = $array['path'];
 // check if logged in to wp
 $cookie = var_export($_COOKIE, true);
-$loggedin = strpos("wordpress_logged_in", $cookie);
+$loggedin = strpos($cookie, "wordpress_logged_in");
 // check if page isn't a comment submission or reload request from client
 (isset($_SERVER['HTTP_CACHE_CONTROL']) && $_SERVER['HTTP_CACHE_CONTROL'] == 'max-age=0') ? $reload = 1 : $reload = 0;
 // check user-agent for robot
 (stripos($_SERVER['HTTP_USER_AGENT'], "bot") || stripos($_SERVER['HTTP_USER_AGENT'], "spider")) ? $robot = 1 : $robot = 0;
 // check feed
-strpos($url, '/feed/') ? $feed = 1 : $feed = 0;
-// check json request(for mobile device)
-strpos($url, 'json=') ? $json = 1 : $json = 0;
+$feed = strpos($url, '/feed/');
 
-// from wp
+// from wp(original index.php)
 define('WP_USE_THEMES', true);
 
 
 // conditions below will not be cached
-if ($feed || $robot || $json) {
+if ($feed) {
     require('./wp-blog-header.php');
     exit(0);
 }
@@ -71,21 +68,24 @@ include("predis.php");
 $server = array(
     'host' => '127.0.0.1',
     'port' => 6379,
-    'database' => 3
+    'database' => 4
 );
 $redis = new Predis\Client($server);
 
 // check if a cache of the page exists
-if ($redis->hexists($dkey, $ukey)) {
+if ($redis->exists($key)) {
     if ($reload) {
+        ob_start();
         require('./wp-blog-header.php');
-        $redis->hdel($dkey, $ukey);
-        $msg = 'cache of page deleted';
+        $html = ob_get_contents();
+        ob_end_clean();
+        echo $html;
+        $redis->setex($key, 86400, $html);
+        $msg = 'cache of page updated';
     }
     else {
-        echo $redis->hget($dkey, $ukey);
+        echo $redis->get($key);
         if (!$debug) exit(0);
-        $cached = 1;
         $msg = 'this is a cache';
     }
 // cache the page
@@ -105,9 +105,9 @@ if ($redis->hexists($dkey, $ukey)) {
     // Store to cache only if the page exist and is not a search result.
     if (!is_404() && !is_search()) {
         // store html contents to redis cache
-        $redis->hset($dkey, $ukey, $html);
+        $redis->setex($key, 86400, $html);
         // $redis->hset('timestamp', $ukey, $_SERVER['REQUEST_TIME']);
-        $redis->hset('log', $ukey, $array['path']);
+        // $redis->hset('log', $ukey, $array['path']);
         $msg = 'cache is set';
     }
 }
