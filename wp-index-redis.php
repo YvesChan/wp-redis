@@ -57,7 +57,7 @@ define('WP_USE_THEMES', true);
 
 
 // conditions below will not be cached
-if ($feed) {
+if ($feed || $loggedin) {
     require('./wp-blog-header.php');
     exit(0);
 }
