@@ -49,15 +49,16 @@ $loggedin = strpos($cookie, "wordpress_logged_in");
 (isset($_SERVER['HTTP_CACHE_CONTROL']) && $_SERVER['HTTP_CACHE_CONTROL'] == 'max-age=0') ? $reload = 1 : $reload = 0;
 // check user-agent for robot
 (stripos($_SERVER['HTTP_USER_AGENT'], "bot") || stripos($_SERVER['HTTP_USER_AGENT'], "spider")) ? $robot = 1 : $robot = 0;
-// check feed
+// check feed & search request
 $feed = strpos($url, '/feed/');
+$search = strpos($url, '?s=');
 
 // from wp(original index.php)
 define('WP_USE_THEMES', true);
 
 
 // conditions below will not be cached
-if ($feed || $loggedin) {
+if ($feed || $loggedin || $search) {
     require('./wp-blog-header.php');
     exit(0);
 }
