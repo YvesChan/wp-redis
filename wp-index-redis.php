@@ -52,13 +52,14 @@ $loggedin = strpos($cookie, "wordpress_logged_in");
 // check feed & search request
 $feed = strpos($url, '/feed/');
 $search = strpos($url, '?s=');
+$mobile = is_mobile();
 
 // from wp(original index.php)
 define('WP_USE_THEMES', true);
 
 
 // conditions below will not be cached
-if ($feed || $loggedin || $search) {
+if ($feed || $loggedin || $search || $mobile) {
     require('./wp-blog-header.php');
     exit(0);
 }
@@ -132,6 +133,19 @@ function t_exec($start, $end) {
 function getmicrotime($t) {
     list($usec, $sec) = explode(" ",$t);
     return ((float)$usec + (float)$sec);
+}
+
+function is_mobile() {
+    $user_agent = $_SERVER['HTTP_USER_AGENT'];
+    $mobile_agents = Array("Android", "ios", "ipad", "iphone", "Windows Phone");
+    $is_mobile = false;
+    foreach ($mobile_agents as $device) {
+        if (stristr($user_agent, $device)) {
+            $is_mobile = true;
+            break;
+        }
+    }
+    return $is_mobile;
 }
 
 ?>
