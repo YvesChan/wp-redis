@@ -137,7 +137,7 @@ function getmicrotime($t) {
 
 function is_mobile() {
     $user_agent = $_SERVER['HTTP_USER_AGENT'];
-    $mobile_agents = Array("Android", "ios", "ipad", "iphone", "Windows Phone", "Symbian");
+    $mobile_agents = Array("Android", "ios", "ipad", "iphone", "Windows Phone", "Symbian", "WP7", "WP8");
     $is_mobile = false;
     foreach ($mobile_agents as $device) {
         if (stristr($user_agent, $device)) {
