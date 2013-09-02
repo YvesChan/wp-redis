@@ -41,7 +41,8 @@ $start = microtime();   // start timing page exec
 $url = "http://".$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
 $array = parse_url($url);
 // filter query_string, reduce dumplicated url & check json request(for mobile device)
-strpos($url, 'json=') ? $key = $_SERVER['REQUEST_URI'] : $key = $array['path'];
+// strpos($url, 'json=') ? $key = $_SERVER['REQUEST_URI'] : $key = $array['path'];
+$json = strpos($url, 'json=');
 // check if logged in to wp
 $cookie = var_export($_COOKIE, true);
 $loggedin = strpos($cookie, "wordpress_logged_in");
@@ -59,7 +60,7 @@ define('WP_USE_THEMES', true);
 
 
 // conditions below will not be cached
-if ($feed || $loggedin || $search || $mobile) {
+if ($feed || $loggedin || $search || $mobile || $json) {
     require('./wp-blog-header.php');
     exit(0);
 }
