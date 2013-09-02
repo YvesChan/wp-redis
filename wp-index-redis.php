@@ -141,7 +141,7 @@ function is_mobile() {
     $mobile_agents = Array("Android", "ios", "ipad", "iphone", "Windows Phone", "Symbian", "WP7", "WP8");
     $is_mobile = false;
     foreach ($mobile_agents as $device) {
-        if (stristr($user_agent, $device)) {
+        if (stripos($user_agent, $device)) {
             $is_mobile = true;
             break;
         }
