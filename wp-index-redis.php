@@ -33,7 +33,7 @@
 
 // controller vars here
 $debug = 1;			// set to 1 if you wish to see execution time and cache actions
-$expiration = 86400;     // set expire time in seconds
+$expiration = 43200;     // set expire time in seconds
 $start = microtime();   // start timing page exec
 
 
@@ -42,6 +42,7 @@ $url = "http://".$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
 $array = parse_url($url);
 // filter query_string, reduce dumplicated url & check json request(for mobile device)
 // strpos($url, 'json=') ? $key = $_SERVER['REQUEST_URI'] : $key = $array['path'];
+$key = $_SERVER['REQUEST_URI'];
 $json = strpos($url, 'json=');
 // check if logged in to wp
 $cookie = var_export($_COOKIE, true);
